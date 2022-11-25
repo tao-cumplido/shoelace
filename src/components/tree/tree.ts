@@ -4,9 +4,8 @@ import { clamp } from '../../internal/math';
 import ShoelaceElement from '../../internal/shoelace-element';
 import { watch } from '../../internal/watch';
 import { LocalizeController } from '../../utilities/localize';
-import { isTreeItem } from '../tree-item/tree-item';
+import SlTreeItem, { isTreeItem } from '../tree-item/tree-item';
 import styles from './tree.styles';
-import type SlTreeItem from '../tree-item/tree-item';
 import type { CSSResultGroup } from 'lit';
 
 function syncCheckboxes(changedTreeItem: SlTreeItem) {
@@ -86,7 +85,7 @@ export default class SlTree extends ShoelaceElement {
 
     await this.updateComplete;
     this.mutationObserver = new MutationObserver(this.handleTreeChanged);
-    this.mutationObserver.observe(this, { childList: true, subtree: true });
+    this.mutationObserver.observe(this, { childList: true, subtree: true, attributeFilter: ['selected'] });
   }
 
   disconnectedCallback() {
@@ -139,14 +138,18 @@ export default class SlTree extends ShoelaceElement {
 
   handleTreeChanged = (mutations: MutationRecord[]) => {
     for (const mutation of mutations) {
-      const addedNodes: SlTreeItem[] = [...mutation.addedNodes].filter(isTreeItem) as SlTreeItem[];
-      const removedNodes = [...mutation.removedNodes].filter(isTreeItem) as SlTreeItem[];
+      if (mutation.attributeName === 'selected' && mutation.target instanceof SlTreeItem) {
+        this.selectItem(mutation.target);
+      } else {
+        const addedNodes: SlTreeItem[] = [...mutation.addedNodes].filter(isTreeItem) as SlTreeItem[];
+        const removedNodes = [...mutation.removedNodes].filter(isTreeItem) as SlTreeItem[];
 
-      addedNodes.forEach(this.initTreeItem);
+        addedNodes.forEach(this.initTreeItem);
 
-      // If the focused item has been removed form the DOM, move the focus to the first focusable item
-      if (removedNodes.includes(this.lastFocusedItem)) {
-        this.focusItem(this.getFocusableItems()[0]);
+        // If the focused item has been removed form the DOM, move the focus to the first focusable item
+        if (removedNodes.includes(this.lastFocusedItem)) {
+          this.focusItem(this.getFocusableItems()[0]);
+        }
       }
     }
   };
